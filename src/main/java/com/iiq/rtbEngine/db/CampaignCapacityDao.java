@@ -3,6 +3,7 @@ package com.iiq.rtbEngine.db;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,11 +17,13 @@ public class CampaignCapacityDao {
     private static final String PROFILE_CAMPAIGN_CAPACITY_TABLE_NAME = "ProfileCampaignCapacity";
     private static final String CAPACITY_COLUMN = "capacity";
     private static final String CAMPAIGN_ID_COLUMN = "campaign_id";
+    private static final String PROFILE_ID_COLUMN = "profile_id";
     private static final String CREATE_PROFILE_CAMPAIGN_CAPACITY_TABLE = "CREATE TABLE "+PROFILE_CAMPAIGN_CAPACITY_TABLE_NAME+
             CAMPAIGN_ID_COLUMN + " INTEGER not NULL, " +
+            PROFILE_ID_COLUMN + " INTEGER not NULL, " +
             CAPACITY_COLUMN + " INTEGER, " +
             " PRIMARY KEY ( "+CAMPAIGN_ID_COLUMN+"))";
-    private static final String UPDATE_STATEMENT = "MERGE INTO "+PROFILE_CAMPAIGN_CAPACITY_TABLE_NAME+" VALUES ( %s, %s)";
+    private static final String UPDATE_STATEMENT = "MERGE INTO "+PROFILE_CAMPAIGN_CAPACITY_TABLE_NAME+" VALUES ( %s, %s, %s)";
     private static final String SELECT_ALL_PROFILE_CAMPAIGN_CAPACITY_STATEMENT = "SELECT * FROM "+PROFILE_CAMPAIGN_CAPACITY_TABLE_NAME;
 
     public void createTable() {
@@ -32,28 +35,30 @@ public class CampaignCapacityDao {
         }
     }
 
-    public void updateTable(String campaignId, String capacity) {
+    public void updateTable(Integer campaignId,Integer profileId, int capacity) {
         try {
-            h2Db.executeUpdate(String.format(UPDATE_STATEMENT, campaignId, capacity));
+            h2Db.executeUpdate(String.format(UPDATE_STATEMENT, campaignId,profileId, capacity));
         } catch (SQLException e) {
-            System.out.println("Error while trying to update table "+CREATE_PROFILE_CAMPAIGN_CAPACITY_TABLE+" with campaignId"+campaignId+" capacity"+capacity);
+            System.out.println("Error while trying to update table "+CREATE_PROFILE_CAMPAIGN_CAPACITY_TABLE+" with campaignId"+campaignId+" profileId"+ profileId+" capacity"+capacity);
             e.printStackTrace();
         }
     }
 
-    public Map<Integer, Integer> getAllProfileCampaignCapacity() {
+    public Map<Integer, Map<Integer, Integer>> getAllProfileCampaignCapacity() {
         try {
             List<Map<String, String>> result = h2Db.executeQuery(SELECT_ALL_PROFILE_CAMPAIGN_CAPACITY_STATEMENT);
-            if(result == null)
+            if (result == null)
                 return null;
 
-            Map<Integer,Integer> campaignCapacity = new HashMap<>();
+            Map<Integer, Map<Integer, Integer>> campaignCapacity = new HashMap<>();
 
-            for(Map<String, String> row : result) {
+            for (Map<String, String> row : result) {
                 Integer campaignId = Integer.parseInt(row.get(CAMPAIGN_ID_COLUMN));
+                Integer profileId = Integer.parseInt(row.get(PROFILE_ID_COLUMN));
                 Integer capacity = Integer.parseInt(row.get(CAPACITY_COLUMN));
-                if(!campaignCapacity.containsKey(campaignId))
-                    campaignCapacity.put(campaignId,capacity);
+                if (!campaignCapacity.containsKey(campaignId))
+                    campaignCapacity.put(campaignId, new HashMap<>());
+                campaignCapacity.get(campaignId).put(profileId, capacity);
             }
             return campaignCapacity;
         } catch (Exception e) {
